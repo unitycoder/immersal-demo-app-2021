@@ -80,12 +80,9 @@ namespace Immersal.Samples.DemoApp
         {
             JobClearAsync j = new JobClearAsync();
             j.anchor = deleteAnchor;
-            j.OnResult += (SDKResultBase r) =>
+            j.OnResult += (SDKClearResult result) =>
             {
-                if (r is SDKClearResult result && result.error == "none")
-                {
-                    Debug.Log("Workspace cleared successfully");
-                }
+                Debug.Log("Workspace cleared successfully");
             };
 
             m_Jobs.Add(j.RunJobAsync());
@@ -168,23 +165,20 @@ namespace Immersal.Samples.DemoApp
                 {
                     uploadStartTime = Time.realtimeSinceStartup;
                 };
-                j.OnResult += (SDKResultBase r) =>
+                j.OnResult += (SDKImageResult result) =>
                 {
-                    if (r is SDKImageResult result && result.error == "none")
-                    {
-                        float et = Time.realtimeSinceStartup - uploadStartTime;
-                        Debug.Log(string.Format("Image uploaded successfully in {0} seconds", et));
-                        onImageUploaded?.Invoke();
-                    }
+                    float et = Time.realtimeSinceStartup - uploadStartTime;
+                    Debug.Log(string.Format("Image uploaded successfully in {0} seconds", et));
+                    onImageUploaded?.Invoke();
                 };
                 j.Progress.ProgressChanged += (s, progress) =>
                 {
                     int value = (int)(100f * progress);
                     Debug.Log(string.Format("Upload progress: {0}%", value));
                 };
-                j.OnError += (HttpResponseMessage response) =>
+                j.OnError += (e) =>
                 {
-                    Debug.Log(string.Format("Capture error: " + response.StatusCode));
+                    Debug.Log(string.Format("Capture error: " + e));
                 };
 
                 m_Jobs.Add(j.RunJobAsync());
@@ -204,18 +198,15 @@ namespace Immersal.Samples.DemoApp
             j.featureCount = 600;
             j.preservePoses = preservePoses;
             j.windowSize = 0;
-            j.OnResult += (SDKResultBase r) =>
+            j.OnResult += (SDKConstructResult result) =>
             {
-                if (r is SDKConstructResult result && result.error == "none")
+                Debug.Log(string.Format("Started constructing a map width ID {0}, containing {1} images and detail level of {2}", result.id, result.size, j.featureCount));
+
+                onMapSubmitted?.Invoke();
+
+                if (isPublic)
                 {
-                    Debug.Log(string.Format("Started constructing a map width ID {0}, containing {1} images and detail level of {2}", result.id, result.size, j.featureCount));
-
-                    onMapSubmitted?.Invoke();
-
-                    if (isPublic)
-                    {
-                        SetSharingMode(result.id, true);
-                    }
+                    SetSharingMode(result.id, true);
                 }
             };
 
@@ -227,12 +218,9 @@ namespace Immersal.Samples.DemoApp
             JobSetPrivacyAsync j = new JobSetPrivacyAsync();
             j.id = mapId;
             j.privacy = isPublic ? 1 : 0;
-            j.OnResult += (SDKResultBase r) =>
+            j.OnResult += (SDKMapPrivacyResult result) =>
             {
-                if (r is SDKMapPrivacyResult result && result.error == "none")
-                {
-                    Debug.Log(string.Format("Sharing mode set successfully, set to: {0}", j.privacy));
-                }
+                Debug.Log(string.Format("Sharing mode set successfully, set to: {0}", j.privacy));
             };
 
             m_Jobs.Add(j.RunJobAsync());

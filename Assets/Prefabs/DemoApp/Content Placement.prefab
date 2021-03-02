@@ -1333,6 +1333,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: afb5b04009a266d43ab23204c26f6bb1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  dropdown: {fileID: 8850121587002323499}
+  loadPublicMaps: 0
   m_ARMap: {fileID: 0}
 --- !u!1 &8850121587039383040
 GameObject:

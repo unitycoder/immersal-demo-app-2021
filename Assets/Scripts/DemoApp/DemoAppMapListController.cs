@@ -26,6 +26,16 @@ namespace Immersal.Samples.DemoApp
     [RequireComponent(typeof(TMP_Dropdown))]
     public class DemoAppMapListController : MonoBehaviour
     {
+        private const int DefaultRadius = 200;
+        private const string StatusSparse = "sparse";
+        private const string StatusDone = "done";
+        private const string StatusFailed = "failed";
+        private const string StatusPending = "pending";
+        private const string StatusProcessing = "processing";
+
+        public TMP_Dropdown dropdown;
+        public bool loadPublicMaps = false;
+
         [SerializeField]
         private ARMap m_ARMap = null;
 
@@ -40,11 +50,6 @@ namespace Immersal.Samples.DemoApp
         private float startTime = 0;
         private bool m_HideStatusText = false;
 
-        public TMP_Dropdown dropdown
-        {
-            get { return m_Dropdown; }
-        }
-
         public List<SDKJob> maps
         {
             get { return m_Maps.Values.ToList(); }
@@ -58,7 +63,7 @@ namespace Immersal.Samples.DemoApp
 
         void OnEnable()
         {
-            InitDropdown(true);
+            InitDropdown();
 
             startTime = Time.realtimeSinceStartup;
 
@@ -82,25 +87,30 @@ namespace Immersal.Samples.DemoApp
             m_HideStatusText = true;
         }
 
-        private void InitDropdown(bool firstTime = false)
+        private void InitDropdown()
         {
-            m_Dropdown.ClearOptions();
+            dropdown.ClearOptions();
+            dropdown.AddOptions(new List<string>() { "Loading map list..." });
+        }
 
-            if (firstTime)
+        private void UpdateDropdown()
+        {
+            List<string> names = new List<string>();
+
+            foreach (SDKJob map in maps)
             {
-                m_Dropdown.AddOptions(new List<string>() { "Loading map list..." });
-                return;
+                names.Add(map.name);
             }
 
-            if (m_ARMap.mapFile != null)
-            {
-                m_Dropdown.AddOptions(new List<string>() { string.Format("<{0}>", m_ARMap.mapFile.name) });
-                m_EmbeddedMap = m_ARMap.mapFile;
-            }
-            else
-            {
-                m_Dropdown.AddOptions(new List<string>() { "Load map..." });
-            }
+            int oldIndex = dropdown.value;
+            if (oldIndex > names.Count - 1)
+                oldIndex = 0;
+
+            dropdown.ClearOptions();
+            dropdown.AddOptions(new List<string>() { "Load map..." });
+            dropdown.AddOptions(names);
+            dropdown.SetValueWithoutNotify(oldIndex);
+            dropdown.RefreshShownValue();
         }
 
         void Start()
@@ -151,14 +161,14 @@ namespace Immersal.Samples.DemoApp
                     SDKJob map = maps[value];
                     switch (map.status)
                     {
-                        case "done":
-                        case "sparse":
+                        case StatusDone:
+                        case StatusSparse:
                         {
                             m_ARMap.FreeMap();
-                            LoadMap(map.id);
+                            LoadMap(map);
                         } break;
-                        case "pending":
-                        case "processing":
+                        case StatusPending:
+                        case StatusProcessing:
                             NotificationManager.Instance.GenerateWarning("The map hasn't finished processing yet, try again in a few seconds.");
                             dropdown.SetValueWithoutNotify(0);
                             break;
@@ -195,98 +205,90 @@ namespace Immersal.Samples.DemoApp
             j.useGPS = LocationProvider.Instance.gpsOn;
             j.latitude = LocationProvider.Instance.latitude;
             j.longitude = LocationProvider.Instance.longitude;
-            j.radius = 200;
-            j.OnResult += (SDKResultBase r) =>
+            j.radius = DefaultRadius;
+            j.OnResult += (SDKJobsResult result) =>
             {
                 m_Maps.Clear();
 
-                if (r is SDKJobsResult result && result.error == "none" && result.count > 0)
+                if (result.count > 0)
                 {
+                    Debug.Log("Found " + result.count + " private maps");
                     // add private maps
                     foreach (SDKJob job in result.jobs)
                     {
-                        if (job.status != "failed")
+                        if (job.status == StatusSparse || job.status == StatusDone)
                         {
                             m_Maps[job.id] = job;
                         }
                     }
                 }
 
-                JobListJobsAsync j2 = new JobListJobsAsync();
-                j2.useToken = false;
-                j2.useGPS = LocationProvider.Instance.gpsOn;
-                j2.latitude = LocationProvider.Instance.latitude;
-                j2.longitude = LocationProvider.Instance.longitude;
-                j2.radius = 200;
-                j2.OnResult += (SDKResultBase r2) =>
+                if (loadPublicMaps)
                 {
-                    if (r2 is SDKJobsResult result2 && result2.error == "none" && result2.count > 0)
+                    JobListJobsAsync j2 = new JobListJobsAsync();
+                    j2.useToken = false;
+                    j2.useGPS = LocationProvider.Instance.gpsOn;
+                    j2.latitude = LocationProvider.Instance.latitude;
+                    j2.longitude = LocationProvider.Instance.longitude;
+                    j2.radius = DefaultRadius;
+                    j2.OnResult += (SDKJobsResult result2) =>
                     {
-                        // add public maps
-                        foreach (SDKJob job in result2.jobs)
+                        Debug.Log("Found " + result2.count + " public maps");
+                        if (result2.count > 0)
                         {
-                            if (job.status != "failed")
+                            // add public maps
+                            foreach (SDKJob job in result2.jobs)
                             {
-                                m_Maps[job.id] = job;
+                                if (job.status == StatusSparse || job.status == StatusDone)
+                                {
+                                    m_Maps[job.id] = job;
+                                }
                             }
                         }
-                    }
 
-                    List<SDKJob> sortedMaps = GetMapsSorted();
-                    List<string> names = new List<string>();
+                        UpdateDropdown();
+                        MapListLoaded?.Invoke();
+                    };
 
-                    foreach (SDKJob map in sortedMaps)
-                    {
-                        names.Add(map.name);
-                    }
-
-                    int oldIndex = dropdown.value;
-                    if (oldIndex > names.Count - 1)
-                        oldIndex = 0;
-
-                    InitDropdown();
-                    m_Dropdown.AddOptions(names);
-                    m_Dropdown.SetValueWithoutNotify(oldIndex);
-                    m_Dropdown.RefreshShownValue();
-
+                    m_Jobs.Add(j2.RunJobAsync());
+                }
+                else
+                {
+                    UpdateDropdown();
                     MapListLoaded?.Invoke();
-                };
-
-                m_Jobs.Add(j2.RunJobAsync());
+                }
             };
 
             m_Jobs.Add(j.RunJobAsync());
         }
 
-        public void LoadMap(int jobId)
+        public void LoadMap(SDKJob job)
         {
             if (!ParseManager.Instance.parseLiveClient.IsConnected())
                 DemoAppManager.Instance.ShowStatusText(true, "Please wait while loading...");
 
             JobLoadMapAsync j = new JobLoadMapAsync();
-            j.id = jobId;
-            j.OnResult += async (SDKResultBase r) =>
+            j.id = job.id;
+            j.useToken = job.privacy == "0" ? true : false;
+            j.OnResult += async (SDKMapResult result) =>
             {
-                if (r is SDKMapResult result && result.error == "none")
+                byte[] mapData = Convert.FromBase64String(result.b64);
+                Debug.Log(string.Format("Load map {0} ({1} bytes)", job.id, mapData.Length));
+
+                this.m_ARMap.LoadMap(mapData);
+
+                Parse.ParseObject currentScene = await AROManager.Instance.GetSceneByMapId(job.id);
+                if (currentScene == null)
                 {
-                    byte[] mapData = Convert.FromBase64String(result.b64);
-                    Debug.Log(string.Format("Load map {0} ({1} bytes)", jobId, mapData.Length));
-
-                    this.m_ARMap.LoadMap(mapData);
-
-                    Parse.ParseObject currentScene = await AROManager.Instance.GetSceneByMapId(jobId);
-                    if (currentScene == null)
-                    {
-                        currentScene = await AROManager.Instance.AddScene(jobId);
-                    }
-                    Debug.Log("currentScene: " + currentScene.ObjectId);
-
-                    AROManager.Instance.currentScene = currentScene;
-                    AROManager.Instance.StartRealtimeQuery();
-
-                    ARLocalizer.Instance.StartLocalizing();
-                    ARLocalizer.Instance.autoStart = true;
+                    currentScene = await AROManager.Instance.AddScene(job.id);
                 }
+                Debug.Log("currentScene: " + currentScene.ObjectId);
+
+                AROManager.Instance.currentScene = currentScene;
+                AROManager.Instance.StartRealtimeQuery();
+
+                ARLocalizer.Instance.StartLocalizing();
+                ARLocalizer.Instance.autoStart = true;
             };
 
             m_Jobs.Add(j.RunJobAsync());
