@@ -216,7 +216,7 @@ namespace Immersal.Samples.DemoApp
                     // add private maps
                     foreach (SDKJob job in result.jobs)
                     {
-                        if (job.status == StatusSparse || job.status == StatusDone)
+                        if (job.status != StatusFailed)
                         {
                             m_Maps[job.id] = job;
                         }
@@ -239,7 +239,7 @@ namespace Immersal.Samples.DemoApp
                             // add public maps
                             foreach (SDKJob job in result2.jobs)
                             {
-                                if (job.status == StatusSparse || job.status == StatusDone)
+                                if (job.status != StatusFailed)
                                 {
                                     m_Maps[job.id] = job;
                                 }
@@ -266,6 +266,18 @@ namespace Immersal.Samples.DemoApp
         {
             if (!ParseManager.Instance.parseLiveClient.IsConnected())
                 DemoAppManager.Instance.ShowStatusText(true, "Please wait while loading...");
+            
+            if (m_Sdk.Localizer.useServerLocalizer)
+            {
+                foreach (SDKMapId mapId in m_Sdk.Localizer.serverMapIds)
+                {
+                    ARSpace.UnregisterSpace(ARSpace.Instance.transform, mapId.id);
+                }
+            }
+            
+            SDKMapId[] mapIds = new SDKMapId[1];
+            mapIds[0] = new SDKMapId();
+            mapIds[0].id = job.id;
 
             JobLoadMapAsync j = new JobLoadMapAsync();
             j.id = job.id;
@@ -275,7 +287,7 @@ namespace Immersal.Samples.DemoApp
                 byte[] mapData = Convert.FromBase64String(result.b64);
                 Debug.Log(string.Format("Load map {0} ({1} bytes)", job.id, mapData.Length));
 
-                this.m_ARMap.LoadMap(mapData);
+                m_ARMap.LoadMap(mapData);
 
                 Parse.ParseObject currentScene = await AROManager.Instance.GetSceneByMapId(job.id);
                 if (currentScene == null)
@@ -284,11 +296,20 @@ namespace Immersal.Samples.DemoApp
                 }
                 Debug.Log("currentScene: " + currentScene.ObjectId);
 
-                AROManager.Instance.currentScene = currentScene;
-                AROManager.Instance.StartRealtimeQuery();
+                if (AROManager.Instance.currentScene?.ObjectId != currentScene.ObjectId)
+                {
+                    AROManager.Instance.currentScene = currentScene;
+                    AROManager.Instance.StartRealtimeQuery();
 
-                ARLocalizer.Instance.StartLocalizing();
-                ARLocalizer.Instance.autoStart = true;
+                    if (m_Sdk.Localizer.useServerLocalizer)
+                    {
+                        ARSpace.RegisterSpace(ARSpace.Instance.transform, mapIds[0].id, m_ARMap, m_ARMap.transform.localPosition, m_ARMap.transform.localRotation, m_ARMap.transform.localScale);
+                        m_Sdk.Localizer.serverMapIds = mapIds;
+                    }
+                    
+                    m_Sdk.Localizer.autoStart = true;
+                    m_Sdk.Localizer.StartLocalizing();
+                }
             };
 
             m_Jobs.Add(j.RunJobAsync());
