@@ -90,9 +90,6 @@ namespace Immersal.Samples.DemoApp
 
         void OnDisable()
         {
-            if (autoLocalize)
-                StopOnServerLocalizer();
-            
             m_ARMap.FreeMap();
             m_AROManager.Reset();
             m_MapListController.MapListLoaded -= OnMapListLoaded;
@@ -102,7 +99,7 @@ namespace Immersal.Samples.DemoApp
         {
             if (autoLocalize)
             {
-                StartOnServerLocalizer();
+                // TODO: rework on-server loc
             }
         }
 
@@ -113,57 +110,6 @@ namespace Immersal.Samples.DemoApp
             EnablePlaneManager(false);
 
             m_MapListController.dropdown.interactable = !autoLocalize;
-        }
-
-        public void StartOnServerLocalizer()
-        {
-            ARLocalizer.Instance.StopLocalizing();
-            m_ARMap.FreeMap();
-            m_MapListController.dropdown.SetValueWithoutNotify(0);
-
-            List<SDKJob> maps = m_MapListController.maps;
-            SDKMapId[] mapIds = new SDKMapId[maps.Count];
-            for (int i = 0; i < mapIds.Length; i++)
-            {
-                mapIds[i] = new SDKMapId();
-                mapIds[i].id = maps[i].id;
-            }
-
-            if (mapIds.Length > 0)
-            {
-                if (mapIds.Length > 5)
-                    System.Array.Resize(ref mapIds, 5);
-                
-                foreach (SDKMapId mapId in mapIds)
-                {
-                    if (!ARSpace.mapHandleToMap.ContainsKey(mapId.id))
-                    {
-                        ARSpace.RegisterSpace(ARSpace.Instance.transform, mapId.id, m_ARMap, m_ARMap.transform.localPosition, m_ARMap.transform.localRotation, m_ARMap.transform.localScale);
-                    }
-                }
-
-                ARLocalizer.Instance.OnMapChanged += MapLocalized;
-                ARLocalizer.Instance.serverMapIds = mapIds;
-                ARLocalizer.Instance.useServerLocalizer = true;
-                ARLocalizer.Instance.StartLocalizing();
-                ARLocalizer.Instance.autoStart = true;
-            }
-        }
-
-        public void StopOnServerLocalizer()
-        {
-            ARLocalizer.Instance.useServerLocalizer = false;
-            ARLocalizer.Instance.StopLocalizing();
-            ARLocalizer.Instance.OnMapChanged -= MapLocalized;
-            m_MapListController.dropdown.SetValueWithoutNotify(0);
-
-            foreach (SDKMapId mapId in ARLocalizer.Instance.serverMapIds)
-            {
-                if (ARSpace.mapHandleToMap.ContainsKey(mapId.id))
-                {
-                    ARSpace.UnregisterSpace(ARSpace.Instance.transform, mapId.id);
-                }
-            }
         }
 
         private async void MapLocalized(int serverMapId)
@@ -279,11 +225,11 @@ namespace Immersal.Samples.DemoApp
 
             if (autoLocalize)
             {
-                StartOnServerLocalizer();
+                // TODO: rework on-server loc
             }
             else
             {
-                StopOnServerLocalizer();
+                // TODO: rework on-server loc
             }
         }
 

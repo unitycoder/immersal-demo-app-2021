@@ -267,14 +267,6 @@ namespace Immersal.Samples.DemoApp
             if (!ParseManager.Instance.parseLiveClient.IsConnected())
                 DemoAppManager.Instance.ShowStatusText(true, "Please wait while loading...");
             
-            if (m_Sdk.Localizer.useServerLocalizer)
-            {
-                foreach (SDKMapId mapId in m_Sdk.Localizer.serverMapIds)
-                {
-                    ARSpace.UnregisterSpace(ARSpace.Instance.transform, mapId.id);
-                }
-            }
-            
             SDKMapId[] mapIds = new SDKMapId[1];
             mapIds[0] = new SDKMapId();
             mapIds[0].id = job.id;
@@ -301,12 +293,6 @@ namespace Immersal.Samples.DemoApp
                     AROManager.Instance.currentScene = currentScene;
                     AROManager.Instance.StartRealtimeQuery();
 
-                    if (m_Sdk.Localizer.useServerLocalizer)
-                    {
-                        ARSpace.RegisterSpace(ARSpace.Instance.transform, mapIds[0].id, m_ARMap, m_ARMap.transform.localPosition, m_ARMap.transform.localRotation, m_ARMap.transform.localScale);
-                        m_Sdk.Localizer.serverMapIds = mapIds;
-                    }
-                    
                     m_Sdk.Localizer.autoStart = true;
                     m_Sdk.Localizer.StartLocalizing();
                 }
