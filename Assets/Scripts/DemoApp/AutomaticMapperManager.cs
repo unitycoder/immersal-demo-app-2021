@@ -1,4 +1,4 @@
-﻿/*===============================================================================
+/*===============================================================================
 Copyright (C) 2020 Immersal Ltd. All Rights Reserved.
 
 This file is part of the Immersal SDK.
@@ -47,7 +47,7 @@ namespace Immersal.Samples.DemoApp
         [SerializeField]
         private Color m_PointColor = new Color(0.57f, 0.93f, 0.12f);
         [SerializeField]
-        private float m_PointSize = 0.01f;
+        private float m_PointSize = 0.05f;
         [SerializeField]
         private bool m_PreservePoses = false;
 
@@ -218,9 +218,11 @@ namespace Immersal.Samples.DemoApp
             m_Mesh = new Mesh();
             m_MeshFilter.mesh = m_Mesh;
 
-            Material material = new Material(Shader.Find("Immersal/pointcloud3d"));
+            Material material = new Material(Shader.Find("Immersal/Point Cloud"));
             m_MeshRenderer.material = material;
             m_MeshRenderer.material.SetFloat("_PointSize", m_PointSize);
+            m_MeshRenderer.material.SetFloat("_PerspectiveEnabled", 1f);
+            m_MeshRenderer.material.SetColor("_PointColor", m_PointColor);
         }
 
         public void CreateCloud(Vector3[] points, int totalPoints, Matrix4x4 offset)
