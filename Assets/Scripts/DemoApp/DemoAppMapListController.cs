@@ -27,11 +27,6 @@ namespace Immersal.Samples.DemoApp
     public class DemoAppMapListController : MonoBehaviour
     {
         private const int DefaultRadius = 200;
-        private const string StatusSparse = "sparse";
-        private const string StatusDone = "done";
-        private const string StatusFailed = "failed";
-        private const string StatusPending = "pending";
-        private const string StatusProcessing = "processing";
 
         public TMP_Dropdown dropdown;
         public bool loadPublicMaps = false;
@@ -161,14 +156,14 @@ namespace Immersal.Samples.DemoApp
                     SDKJob map = maps[value];
                     switch (map.status)
                     {
-                        case StatusDone:
-                        case StatusSparse:
+                        case SDKJobState.Done:
+                        case SDKJobState.Sparse:
                         {
                             m_ARMap.FreeMap();
                             LoadMap(map);
                         } break;
-                        case StatusPending:
-                        case StatusProcessing:
+                        case SDKJobState.Pending:
+                        case SDKJobState.Processing:
                             NotificationManager.Instance.GenerateWarning("The map hasn't finished processing yet, try again in a few seconds.");
                             dropdown.SetValueWithoutNotify(0);
                             break;
@@ -216,7 +211,7 @@ namespace Immersal.Samples.DemoApp
                     // add private maps
                     foreach (SDKJob job in result.jobs)
                     {
-                        if (job.status != StatusFailed)
+                        if (job.status != SDKJobState.Failed)
                         {
                             m_Maps[job.id] = job;
                         }
@@ -239,7 +234,7 @@ namespace Immersal.Samples.DemoApp
                             // add public maps
                             foreach (SDKJob job in result2.jobs)
                             {
-                                if (job.status != StatusFailed)
+                                if (job.status != SDKJobState.Failed)
                                 {
                                     m_Maps[job.id] = job;
                                 }
@@ -279,7 +274,7 @@ namespace Immersal.Samples.DemoApp
                 byte[] mapData = Convert.FromBase64String(result.b64);
                 Debug.Log(string.Format("Load map {0} ({1} bytes)", job.id, mapData.Length));
 
-                m_ARMap.LoadMap(mapData);
+                m_ARMap.LoadMap(mapData, job.id);
 
                 Parse.ParseObject currentScene = await AROManager.Instance.GetSceneByMapId(job.id);
                 if (currentScene == null)
