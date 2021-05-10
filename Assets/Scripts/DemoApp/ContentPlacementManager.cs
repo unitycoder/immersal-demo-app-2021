@@ -90,6 +90,9 @@ namespace Immersal.Samples.DemoApp
 
         void OnDisable()
         {
+            if (autoLocalize)
+                StopOnServerLocalizer();
+            
             m_ARMap.FreeMap();
             m_AROManager.Reset();
             m_MapListController.MapListLoaded -= OnMapListLoaded;
@@ -99,7 +102,7 @@ namespace Immersal.Samples.DemoApp
         {
             if (autoLocalize)
             {
-                // TODO: rework on-server loc
+                StartOnServerLocalizer();
             }
         }
 
@@ -112,14 +115,65 @@ namespace Immersal.Samples.DemoApp
             m_MapListController.dropdown.interactable = !autoLocalize;
         }
 
-        private async void MapLocalized(int serverMapId)
+        public void StartOnServerLocalizer()
+        {
+            ARLocalizer.Instance.StopLocalizing();
+            m_ARMap.FreeMap();
+            m_MapListController.dropdown.SetValueWithoutNotify(0);
+
+            List<SDKJob> maps = m_MapListController.maps;
+            SDKMapId[] mapIds = new SDKMapId[maps.Count];
+            for (int i = 0; i < mapIds.Length; i++)
+            {
+                mapIds[i] = new SDKMapId();
+                mapIds[i].id = maps[i].id;
+            }
+
+            if (mapIds.Length > 0)
+            {
+                if (mapIds.Length > 5)
+                    System.Array.Resize(ref mapIds, 5);
+                
+                foreach (SDKMapId mapId in mapIds)
+                {
+                    if (!ARSpace.mapIdToMap.ContainsKey(mapId.id))
+                    {
+                        ARSpace.RegisterSpace(m_ARMap.transform.parent, m_ARMap, m_ARMap.transform.localPosition, m_ARMap.transform.localRotation, m_ARMap.transform.localScale);
+                    }
+                }
+
+                ARLocalizer.Instance.OnMapChanged += MapLocalized;
+                ARLocalizer.Instance.mapIds = mapIds;
+                ARLocalizer.Instance.useServerLocalizer = true;
+                ARLocalizer.Instance.StartLocalizing();
+                ARLocalizer.Instance.autoStart = true;
+            }
+        }
+
+        public void StopOnServerLocalizer()
+        {
+            ARLocalizer.Instance.useServerLocalizer = false;
+            ARLocalizer.Instance.StopLocalizing();
+            ARLocalizer.Instance.OnMapChanged -= MapLocalized;
+            m_MapListController.dropdown.SetValueWithoutNotify(0);
+
+            foreach (SDKMapId mapId in ARLocalizer.Instance.mapIds)
+            {
+                if (ARSpace.mapIdToMap.ContainsKey(mapId.id))
+                {
+                    ARSpace.UnregisterSpace(m_ARMap.transform.parent, mapId.id);
+                }
+            }
+        }
+
+        private async void MapLocalized(int mapId)
         {
             List<SDKJob> maps = m_MapListController.maps;
             int index = -1;
             for (int i = 0; i < maps.Count; i++)
             {
                 SDKJob map = maps[i];
-                if (map.id == serverMapId)
+                if (map.id == mapId)
                 {
                     index = i;
                     break;
@@ -135,10 +189,10 @@ namespace Immersal.Samples.DemoApp
                 NotificationManager.Instance.GenerateSuccess("Map localized successfully.");
             }
 
-            ParseObject currentScene = await m_AROManager.GetSceneByMapId(serverMapId);
+            ParseObject currentScene = await m_AROManager.GetSceneByMapId(mapId);
             if (currentScene == null)
             {
-                currentScene = await m_AROManager.AddScene(serverMapId);
+                currentScene = await m_AROManager.AddScene(mapId);
             }
             Debug.Log("currentScene: " + currentScene.ObjectId);
 
@@ -225,11 +279,11 @@ namespace Immersal.Samples.DemoApp
 
             if (autoLocalize)
             {
-                // TODO: rework on-server loc
+                StartOnServerLocalizer();
             }
             else
             {
-                // TODO: rework on-server loc
+                StopOnServerLocalizer();
             }
         }
 

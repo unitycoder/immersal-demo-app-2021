@@ -32,10 +32,14 @@ namespace Immersal.Samples.DemoApp
         public bool loadPublicMaps = false;
 
         [SerializeField]
+        private ARSpace m_ARSpace = null;
+        [SerializeField]
         private ARMap m_ARMap = null;
 
         public Action MapListLoaded;
 
+        
+        private ParseManager parseManager = null;
         private IDictionary<int, SDKJob> m_Maps;
         private TMP_Dropdown m_Dropdown;
         private List<Task> m_Jobs = new List<Task>();
@@ -67,14 +71,21 @@ namespace Immersal.Samples.DemoApp
                 GetMaps();
             }
 
-            ParseManager.Instance.parseLiveClient.OnConnected += OnParseConnected;
+            parseManager = ParseManager.Instance;
+            if (parseManager != null)
+            {
+                parseManager.parseLiveClient.OnConnected += OnParseConnected;
+            }
         }
 
         void OnDisable()
         {
             m_Jobs.Clear();
             m_JobLock = 0;
-            ParseManager.Instance.parseLiveClient.OnConnected -= OnParseConnected;
+            if (parseManager != null)
+            {
+                parseManager.parseLiveClient.OnConnected -= OnParseConnected;
+            }
         }
 
         private void OnParseConnected()
@@ -138,6 +149,16 @@ namespace Immersal.Samples.DemoApp
             }
         }
 
+        private void FreeAllMaps()
+        {
+            foreach (ARMap map in ARSpace.mapIdToMap.Values.ToList())
+            {
+                map.FreeMap(true);
+            }
+
+            m_Sdk.Localizer.mapIds = new SDKMapId[] { };
+        }
+
         public void OnValueChanged(TMP_Dropdown dropdown)
         {
             int value = dropdown.value - 1;
@@ -145,8 +166,8 @@ namespace Immersal.Samples.DemoApp
             // use embedded map
             if (m_EmbeddedMap != null && value == -1)
             {
-                m_ARMap.mapFile = m_EmbeddedMap;
                 m_ARMap.FreeMap();
+                m_ARMap.mapFile = m_EmbeddedMap;
                 m_ARMap.LoadMap();
             }
             else
@@ -159,7 +180,7 @@ namespace Immersal.Samples.DemoApp
                         case SDKJobState.Done:
                         case SDKJobState.Sparse:
                         {
-                            m_ARMap.FreeMap();
+                            FreeAllMaps();
                             LoadMap(map);
                         } break;
                         case SDKJobState.Pending:
@@ -259,7 +280,7 @@ namespace Immersal.Samples.DemoApp
 
         public void LoadMap(SDKJob job)
         {
-            if (!ParseManager.Instance.parseLiveClient.IsConnected())
+            if (parseManager != null && !parseManager.parseLiveClient.IsConnected())
                 DemoAppManager.Instance.ShowStatusText(true, "Please wait while loading...");
             
             SDKMapId[] mapIds = new SDKMapId[1];
@@ -274,7 +295,7 @@ namespace Immersal.Samples.DemoApp
                 byte[] mapData = Convert.FromBase64String(result.b64);
                 Debug.Log(string.Format("Load map {0} ({1} bytes)", job.id, mapData.Length));
 
-                m_ARMap.LoadMap(mapData, job.id);
+                ARSpace.LoadAndInstantiateARMap(m_ARSpace.transform, result, mapData, m_ARMap.renderMode, m_ARMap.pointColor);
 
                 Parse.ParseObject currentScene = await AROManager.Instance.GetSceneByMapId(job.id);
                 if (currentScene == null)
@@ -287,6 +308,11 @@ namespace Immersal.Samples.DemoApp
                 {
                     AROManager.Instance.currentScene = currentScene;
                     AROManager.Instance.StartRealtimeQuery();
+                    
+                    if (m_Sdk.Localizer.useServerLocalizer)
+                    {
+                        m_Sdk.Localizer.mapIds = mapIds;
+                    }
 
                     m_Sdk.Localizer.autoStart = true;
                     m_Sdk.Localizer.StartLocalizing();
