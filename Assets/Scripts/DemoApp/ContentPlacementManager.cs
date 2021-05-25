@@ -43,6 +43,7 @@ namespace Immersal.Samples.DemoApp
         private bool m_IsTouching = false;
         private Pose m_HitPose;
         private AROManager m_AROManager;
+        private ImmersalSDK m_Sdk;
 
         public static ContentPlacementManager Instance
         {
@@ -108,6 +109,7 @@ namespace Immersal.Samples.DemoApp
 
         void Start()
         {
+            m_Sdk = ImmersalSDK.Instance;
             m_AROManager = GetComponent<AROManager>();
 
             EnablePlaneManager(false);
@@ -115,55 +117,41 @@ namespace Immersal.Samples.DemoApp
             m_MapListController.dropdown.interactable = !autoLocalize;
         }
 
-        public void StartOnServerLocalizer()
+        public async void StartOnServerLocalizer()
         {
-            ARLocalizer.Instance.StopLocalizing();
+            m_Sdk.Localizer.StopLocalizing();
             m_ARMap.FreeMap();
             m_MapListController.dropdown.SetValueWithoutNotify(0);
 
             List<SDKJob> maps = m_MapListController.maps;
-            SDKMapId[] mapIds = new SDKMapId[maps.Count];
-            for (int i = 0; i < mapIds.Length; i++)
-            {
-                mapIds[i] = new SDKMapId();
-                mapIds[i].id = maps[i].id;
-            }
 
-            if (mapIds.Length > 0)
+            if (maps.Count > 0)
             {
-                if (mapIds.Length > 5)
-                    System.Array.Resize(ref mapIds, 5);
-                
-                foreach (SDKMapId mapId in mapIds)
+                SDKMapId[] mapIds = new SDKMapId[maps.Count];
+
+                for (int i = 0; i < maps.Count; i++)
                 {
-                    if (!ARSpace.mapIdToMap.ContainsKey(mapId.id))
-                    {
-                        ARSpace.RegisterSpace(m_ARMap.transform.parent, m_ARMap, m_ARMap.transform.localPosition, m_ARMap.transform.localRotation, m_ARMap.transform.localScale);
-                    }
+                    mapIds[i] = new SDKMapId();
+                    mapIds[i].id = maps[i].id;
+                    await ARSpace.LoadAndInstantiateARMap(null, maps[i]);
                 }
 
-                ARLocalizer.Instance.OnMapChanged += MapLocalized;
-                ARLocalizer.Instance.mapIds = mapIds;
-                ARLocalizer.Instance.useServerLocalizer = true;
-                ARLocalizer.Instance.StartLocalizing();
-                ARLocalizer.Instance.autoStart = true;
+                m_Sdk.Localizer.OnMapChanged += MapLocalized;
+                m_Sdk.Localizer.mapIds = mapIds;
+                m_Sdk.Localizer.useServerLocalizer = true;
+                m_Sdk.Localizer.autoStart = true;
+                m_Sdk.Localizer.StartLocalizing();
             }
         }
 
         public void StopOnServerLocalizer()
         {
-            ARLocalizer.Instance.useServerLocalizer = false;
-            ARLocalizer.Instance.StopLocalizing();
-            ARLocalizer.Instance.OnMapChanged -= MapLocalized;
+            m_Sdk.Localizer.StopLocalizing();
+            m_Sdk.Localizer.useServerLocalizer = false;
+            m_Sdk.Localizer.OnMapChanged -= MapLocalized;
             m_MapListController.dropdown.SetValueWithoutNotify(0);
 
-            foreach (SDKMapId mapId in ARLocalizer.Instance.mapIds)
-            {
-                if (ARSpace.mapIdToMap.ContainsKey(mapId.id))
-                {
-                    ARSpace.UnregisterSpace(m_ARMap.transform.parent, mapId.id);
-                }
-            }
+            m_MapListController.FreeAllMaps();
         }
 
         private async void MapLocalized(int mapId)

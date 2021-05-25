@@ -149,7 +149,7 @@ namespace Immersal.Samples.DemoApp
             }
         }
 
-        private void FreeAllMaps()
+        public void FreeAllMaps()
         {
             foreach (ARMap map in ARSpace.mapIdToMap.Values.ToList())
             {
@@ -162,6 +162,8 @@ namespace Immersal.Samples.DemoApp
         public void OnValueChanged(TMP_Dropdown dropdown)
         {
             int value = dropdown.value - 1;
+
+            m_Sdk.Localizer.StopLocalizing();
 
             // use embedded map
             if (m_EmbeddedMap != null && value == -1)
@@ -287,15 +289,12 @@ namespace Immersal.Samples.DemoApp
             mapIds[0] = new SDKMapId();
             mapIds[0].id = job.id;
 
-            JobLoadMapAsync j = new JobLoadMapAsync();
+            JobLoadMapBinaryAsync j = new JobLoadMapBinaryAsync();
             j.id = job.id;
-            j.useToken = job.privacy == "0" ? true : false;
+            j.useToken = job.privacy == 0 ? true : false;
             j.OnResult += async (SDKMapResult result) =>
             {
-                byte[] mapData = Convert.FromBase64String(result.b64);
-                Debug.Log(string.Format("Load map {0} ({1} bytes)", job.id, mapData.Length));
-
-                ARSpace.LoadAndInstantiateARMap(m_ARSpace.transform, result, mapData, m_ARMap.renderMode, m_ARMap.pointColor);
+                ARSpace.LoadAndInstantiateARMap(m_ARSpace.transform, result, m_ARMap.renderMode, m_ARMap.pointColor);
 
                 Parse.ParseObject currentScene = await AROManager.Instance.GetSceneByMapId(job.id);
                 if (currentScene == null)
