@@ -37,7 +37,6 @@ namespace Immersal.Samples.DemoApp
         private ARMap m_ARMap = null;
 
         public Action MapListLoaded;
-
         
         private ParseManager parseManager = null;
         private IDictionary<int, SDKJob> m_Maps;
@@ -234,7 +233,7 @@ namespace Immersal.Samples.DemoApp
                     // add private maps
                     foreach (SDKJob job in result.jobs)
                     {
-                        if (job.status != SDKJobState.Failed)
+                        if (job.type != (int)SDKJobType.Alignment && job.status != SDKJobState.Failed)
                         {
                             m_Maps[job.id] = job;
                         }
@@ -257,7 +256,7 @@ namespace Immersal.Samples.DemoApp
                             // add public maps
                             foreach (SDKJob job in result2.jobs)
                             {
-                                if (job.status != SDKJobState.Failed)
+                                if (job.type != (int)SDKJobType.Alignment && job.status != SDKJobState.Failed)
                                 {
                                     m_Maps[job.id] = job;
                                 }
