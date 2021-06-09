@@ -118,10 +118,12 @@ namespace Immersal.Samples.DemoApp
             m_ArPointCloudManager.pointCloudsChanged += PointCloudManager_pointCloudsChanged;
             AutomaticMapper.onMapSubmitted += PromptSwitchMode;
             AutomaticMapper.onImageUploaded += OnImageUploaded;
+            AutomaticMapper.onImageSubmitted += OnImageSubmitted;
         }
 
         private void OnDisable()
         {
+            AutomaticMapper.onImageSubmitted -= OnImageSubmitted;
             AutomaticMapper.onImageUploaded -= OnImageUploaded;
             AutomaticMapper.onMapSubmitted -= PromptSwitchMode;
             m_ArPointCloudManager.pointCloudsChanged -= PointCloudManager_pointCloudsChanged;
@@ -133,7 +135,7 @@ namespace Immersal.Samples.DemoApp
 
             if (m_WaitForUpload)
             {
-                if (m_ImagesSubmitted == m_ImagesUploaded)
+                if (m_ImagesUploaded == m_ImagesSubmitted)
                 {
                     DemoAppManager.Instance.ShowStatusText(false);
                     m_ConstructPrompt.SetActive(true);
@@ -145,6 +147,11 @@ namespace Immersal.Samples.DemoApp
         private void OnImageUploaded()
         {
             m_ImagesUploaded++;
+        }
+
+        private void OnImageSubmitted()
+        {
+            m_ImagesSubmitted++;
         }
 
         public void PromptSwitchMode()
@@ -398,7 +405,6 @@ namespace Immersal.Samples.DemoApp
                     // Capture image
                     m_AutomaticMapper.Capture();
                     t = 0f;
-                    m_ImagesSubmitted++;
                     camPrevPos = m_MainCamera.transform.position;
                     camPrevRot = m_MainCamera.transform.rotation;
 

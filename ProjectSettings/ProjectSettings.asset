@@ -173,7 +173,7 @@ PlayerSettings:
     Android: com.immersal.sdk.samples.demoapp
     iPhone: com.immersal.sdk.samples.demoapp
   buildNumber:
-    iPhone: 3
+    iPhone: 4
   AndroidBundleVersionCode: 4
   AndroidMinSdkVersion: 26
   AndroidTargetSdkVersion: 0

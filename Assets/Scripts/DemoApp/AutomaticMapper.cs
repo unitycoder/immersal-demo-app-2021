@@ -27,6 +27,8 @@ namespace Immersal.Samples.DemoApp
         public static event OnMapSubmitted onMapSubmitted;
         public delegate void OnImageUploaded();
         public static event OnImageUploaded onImageUploaded;
+        public delegate void OnImageSubmitted();
+        public static event OnImageSubmitted onImageSubmitted;
 
         private bool m_bCaptureRunning = false;
         private uint m_ImageRun = 0;
@@ -164,6 +166,7 @@ namespace Immersal.Samples.DemoApp
                 j.OnStart += () =>
                 {
                     uploadStartTime = Time.realtimeSinceStartup;
+                    onImageSubmitted?.Invoke();
                 };
                 j.OnResult += (SDKImageResult result) =>
                 {
