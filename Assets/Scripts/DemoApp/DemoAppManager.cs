@@ -31,8 +31,6 @@ namespace Immersal.Samples.DemoApp
         private GameObject m_MapperUI = null;
         [SerializeField]
         private GameObject m_StatusText = null;
-        [SerializeField]
-        private GameObject m_DebugText = null;
 
         public static DemoAppManager Instance
         {
@@ -117,14 +115,7 @@ namespace Immersal.Samples.DemoApp
             Fader fader = m_StatusText.GetComponent<Fader>();
             fader.ToggleFade(on);
         }
-
-        public void AppendDebug(string s)
-        {
-            TextMeshProUGUI label = m_DebugText.GetComponent<TextMeshProUGUI>();
-            s = label.text + "\n" + s;
-            label.text = s;
-        }
-
+        
         private void SwitchState(DemoAppState state)
         {
             switch (state)
