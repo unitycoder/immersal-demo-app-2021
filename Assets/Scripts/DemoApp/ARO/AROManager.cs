@@ -210,6 +210,11 @@ namespace Immersal.Samples.DemoApp.ARO
 
         public async void DeleteAllAROs()
         {
+            if (currentScene == null)
+            {
+                Debug.Log("Unable to delete (no map loaded?)");
+                return;
+            }
             currentScene.RemoveAllFromList("aros", m_AROs.Values);
             await currentScene.SaveAsync();
             await m_ParseClient.DeleteObjectsAsync(m_AROs.Values);
