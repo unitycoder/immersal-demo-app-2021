@@ -128,6 +128,7 @@ Material:
     - _Tint: {r: 0, g: 0.21464825, b: 1, a: 1}
     - _TintInner: {r: 0, g: 0.2606831, b: 0.3207547, a: 1}
     - _TintOuter: {r: 0, g: 0.28107977, b: 1, a: 1}
+  m_BuildTextureStacks: []
 --- !u!114 &7882474088265821206
 MonoBehaviour:
   m_ObjectHideFlags: 11
@@ -140,4 +141,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d0353a89b1f911e48b9e16bdc9f2e058, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  version: 2
+  version: 4
